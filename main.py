@@ -170,7 +170,7 @@ def initial_demo_state(size: int = 15) -> np.ndarray:
     """Create a centered blinker, a simple pattern for terminal testing."""
     state = np.zeros((size, size), dtype=int)
     center = size // 2
-    state[center, center - 1:center + 2] = 1
+    state[center, center - 2:center + 1] = 1
     return state
 
 
