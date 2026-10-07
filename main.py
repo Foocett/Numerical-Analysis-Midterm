@@ -3,7 +3,7 @@
 The transition rules live in ``rules.json`` rather than in the update
 algorithm.  This keeps the numerical part reusable by a future GUI.
 """
-# TEST PR
+# TEST PR - Self
 # TODO Implement GUI support for the cellular automaton
 
 from __future__ import annotations
