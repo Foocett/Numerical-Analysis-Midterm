@@ -3,7 +3,6 @@
 The transition rules live in ``rules.json`` rather than in the update
 algorithm.  This keeps the numerical part reusable by a future GUI.
 """
-# TEST PR - Self
 # TODO Implement GUI support for the cellular automaton
 
 from __future__ import annotations
@@ -16,6 +15,7 @@ from typing import Any
 
 import numpy as np
 import matplotlib.pyplot as plt
+from tkinter import filedialog
 
 
 @dataclass(frozen=True)
@@ -192,6 +192,155 @@ def run_terminal_demo(config_path: Path, generations: int) -> None:
     # on a resume button: automaton.resume()
     # on a load button: replace the model with CellularAutomaton.load_state(...)
 
+def run_gui(config_path: Path) -> None:
+    config = load_config(config_path)
+    automaton = CellularAutomaton.from_config(initial_demo_state(), config)
+
+    #start paused
+    automaton.pause()
+
+    fig, ax = plt.subplots(figsize=(7.5,7.5))
+    fig.subplots_adjust(bottom=0.20)
+    fig.suptitle("Cellular Automaton", fontsize=18, fontweight="bold")
+    image = ax.imshow(automaton.state, cmap="binary", interpolation="nearest", extent=(-0.5, 14.5, 14.5, -0.5))
+
+    
+    ax.set_title(f"Generation {automaton.generation}")
+
+    # Add grid lines
+    rows, cols = automaton.state.shape
+
+    for x in range(cols + 1):
+        ax.axvline(x - 0.5, linewidth=0.5)
+
+    for y in range(rows + 1):
+        ax.axhline(y - 0.5, linewidth=0.5)
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+
+
+    #pause/start button at bottom window
+    pause_ax = fig.add_axes([0.20, 0.04, 0.17, 0.07])
+    pause_button = plt.Button(pause_ax, "Start", color="seagreen", hovercolor="green")
+    pause_button.label.set_color("white")
+
+    #load Prepared States button at bottom window
+    pre_state_ax = fig.add_axes([0.415, 0.04, 0.22, 0.07])
+    pre_state_button = plt.Button(pre_state_ax, "Prepared States", color="steelblue", hovercolor="royalblue")
+    pre_state_button.label.set_color("white")
+
+    #load State from File button
+    file_state_ax = fig.add_axes([0.68, 0.04, 0.17, 0.07])
+    file_state_button = plt.Button(file_state_ax, "Load File", color="darkorange", hovercolor="orange")
+    file_state_button.label.set_color("white")
+
+    #exit button at top
+    exit_ax = fig.add_axes([0.82, 0.90, 0.10, 0.06])
+    exit_button = plt.Button(exit_ax, "Exit", color="firebrick", hovercolor="red")
+    exit_button.label.set_color("white")
+
+    def update_display() -> None:
+        image.set_data(automaton.state)
+        ax.set_title(f"Generation {automaton.generation}")
+        fig.canvas.draw_idle()
+
+    def exit_program(event):
+        plt.close(fig)
+
+    exit_button.on_clicked(exit_program)
+
+    def load_selected_state(file_path):
+        new_automaton = CellularAutomaton.load_state(file_path, automaton.rules, default_state=automaton.default_state, edge_mode=automaton.edge_mode,)
+
+        automaton.state = new_automaton.state
+        automaton.generation = new_automaton.generation
+
+        automaton.pause()
+        pause_button.label.set_text("Start")
+
+        update_display()
+
+    def load_prepared_state(event):
+        states_folder = Path(__file__).with_name("states")
+
+        file_path = filedialog.askopenfilename(title="Select Prepared State", initialdir=states_folder, filetypes=[("JSON files", "*.json")])
+
+        if not file_path:
+            return
+
+        load_selected_state(Path(file_path))
+
+    pre_state_button.on_clicked(load_prepared_state)
+
+    def load_state_from_file(event):
+        file_path = filedialog.askopenfilename(title="Select State File", filetypes=[("JSON files", "*.json")])
+
+        if not file_path:
+            return
+
+        load_selected_state(Path(file_path))
+
+    file_state_button.on_clicked(load_state_from_file)
+
+
+    def toggle_pause(event) -> None:
+        if automaton.running:
+            automaton.pause()
+            pause_button.label.set_text("Start")
+        else:
+            automaton.resume()
+            pause_button.label.set_text("Pause")
+
+        update_display()
+
+    pause_button.on_clicked(toggle_pause)
+
+    def on_click(event):
+        #no edit while running
+        if automaton.running:
+            return
+
+        #grid don't respond to button clicks
+        if event.inaxes != ax:
+            return
+
+        #check click in grid
+        if event.xdata is None or event.ydata is None:
+            return
+
+        row = int(round(event.ydata))
+        col = int(round(event.xdata))
+
+        #check cell on board
+        if( row < 0 or row >= automaton.state.shape[0] or col < 0 or col >= automaton.state.shape[1]):
+            return
+
+        #toggle cell
+        if automaton.state[row, col] == 0:
+            automaton.state[row, col] = 1
+        else:
+            automaton.state[row, col] = 0
+
+        update_display()
+
+    fig.canvas.mpl_connect("button_press_event", on_click)
+    
+
+    def update_animation() -> None:
+        if automaton.running:
+            automaton.step()
+            update_display()
+
+    timer = fig.canvas.new_timer(interval=500)
+    timer.add_callback(update_animation)
+    timer.start()
+
+    plt.show()
+    
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -206,7 +355,9 @@ def main() -> None:
     args = parser.parse_args()
     if args.generations < 0:
         parser.error("--generations must be non-negative")
-    run_terminal_demo(args.rules, args.generations)
+
+
+    run_gui(args.rules)
 
 
 if __name__ == "__main__":
