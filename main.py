@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tkinter import filedialog
 
+from matplotlib.colors import ListedColormap
 
 @dataclass(frozen=True)
 class TransitionRule:
@@ -192,6 +193,17 @@ def run_terminal_demo(config_path: Path, generations: int) -> None:
     # on a resume button: automaton.resume()
     # on a load button: replace the model with CellularAutomaton.load_state(...)
 
+
+#handles 2 states vs multistate colormaps
+def get_cmap_and_max_states(automaton):
+    max_state= max([r.state for r in automaton.rules] + [r.next_state for r in automaton.rules] + [0])
+    if max_state >= 2:
+        #3 states
+        return ListedColormap(["black", "grey", "white"]), max_state
+    else:
+        return ListedColormap(["black", "white"]), 1
+
+
 def run_gui(config_path: Path) -> None:
     config = load_config(config_path)
     automaton = CellularAutomaton.from_config(initial_demo_state(), config)
@@ -202,12 +214,16 @@ def run_gui(config_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(7.5,7.5))
     fig.subplots_adjust(bottom=0.20)
     fig.suptitle("Cellular Automaton", fontsize=18, fontweight="bold")
-    image = ax.imshow(automaton.state, cmap="binary", interpolation="nearest", extent=(-0.5, 14.5, 14.5, -0.5))
+    #image = ax.imshow(automaton.state, cmap="binary", interpolation="nearest", extent=(-0.5, 14.5, 14.5, -0.5))
+
+    initial_cmap, initial_vmax = get_cmap_and_max_states(automaton)
+    image = ax.imshow(automaton.state, cmap=initial_cmap,vmin=0,vmax=initial_vmax,interpolation="nearest",extent=(-0.5,14.5,14.5,-0.5))
 
     
     ax.set_title(f"Generation {automaton.generation}")
 
     # Add grid lines
+    """
     rows, cols = automaton.state.shape
 
     for x in range(cols + 1):
@@ -215,7 +231,7 @@ def run_gui(config_path: Path) -> None:
 
     for y in range(rows + 1):
         ax.axhline(y - 0.5, linewidth=0.5)
-
+    """
     ax.set_xticks([])
     ax.set_yticks([])
 
@@ -224,17 +240,22 @@ def run_gui(config_path: Path) -> None:
 
 
     #pause/start button at bottom window
-    pause_ax = fig.add_axes([0.20, 0.04, 0.17, 0.07])
+    pause_ax = fig.add_axes([0.08, 0.04, 0.17, 0.07])
     pause_button = plt.Button(pause_ax, "Start", color="seagreen", hovercolor="green")
     pause_button.label.set_color("white")
 
+    #rule change button
+    rules_ax = fig.add_axes([0.27, 0.04, 0.17, 0.07])
+    rules_button = plt.Button(rules_ax, "Rules", color="black", hovercolor="green")
+    rules_button.label.set_color("white")
+
     #load Prepared States button at bottom window
-    pre_state_ax = fig.add_axes([0.415, 0.04, 0.22, 0.07])
+    pre_state_ax = fig.add_axes([0.48, 0.04, 0.22, 0.07])
     pre_state_button = plt.Button(pre_state_ax, "Prepared States", color="steelblue", hovercolor="royalblue")
     pre_state_button.label.set_color("white")
 
     #load State from File button
-    file_state_ax = fig.add_axes([0.68, 0.04, 0.17, 0.07])
+    file_state_ax = fig.add_axes([0.72, 0.04, 0.17, 0.07])
     file_state_button = plt.Button(file_state_ax, "Load File", color="darkorange", hovercolor="orange")
     file_state_button.label.set_color("white")
 
@@ -252,6 +273,48 @@ def run_gui(config_path: Path) -> None:
         plt.close(fig)
 
     exit_button.on_clicked(exit_program)
+
+    #hnadles swapping rule files
+    def load_selected_rules(file_path: Path):
+        new_config = load_config(file_path)
+        automaton.rules = [
+            TransitionRule(
+                state=int(rule["state"]),
+                neighbor_counts={
+                    int(neighbor_state): {int(count) for count in counts}
+                    for neighbor_state, counts in rule.get("neighbors", {}).items()
+                },
+                next_state=int(rule["next_state"]),
+            )
+            for rule in new_config["transitions"]
+        ]
+        automaton.default_state = int(new_config.get("default_state", 0))
+        automaton.edge_mode = str(new_config.get("edge_mode", "dead"))
+
+        #reset grid upon switching rules
+        automaton.state = np.zeros(automaton.shape, dtype=int)
+        automaton.generation = 0
+        automaton.pause()
+        pause_button.label.set_text("Start")
+
+        #updates colormap to new ruleset
+        cmap_new, vmax_new = get_cmap_and_max_states(automaton)
+        image.set_cmap(cmap_new)
+        image.set_clim(vmin=0, vmax=vmax_new)
+
+        update_display()
+
+    def load_rules_callback(event):
+        file_path = filedialog.askopenfilename(
+            title="Selec rules json",
+            initialdir=Path(__file__).parent,
+            filetypes=[("json files", "*.json")]
+        )
+        if not file_path:
+            return
+        load_selected_rules(Path(file_path))
+
+    rules_button.on_clicked(load_rules_callback)
 
     def load_selected_state(file_path):
         new_automaton = CellularAutomaton.load_state(file_path, automaton.rules, default_state=automaton.default_state, edge_mode=automaton.edge_mode,)
@@ -318,13 +381,18 @@ def run_gui(config_path: Path) -> None:
         #check cell on board
         if( row < 0 or row >= automaton.state.shape[0] or col < 0 or col >= automaton.state.shape[1]):
             return
-
+        """
         #toggle cell
         if automaton.state[row, col] == 0:
             automaton.state[row, col] = 1
         else:
             automaton.state[row, col] = 0
+        """
 
+        #cycles through multiple states rather than 0 or 1
+        _filler, max_states = get_cmap_and_max_states(automaton)
+        num_states = max_states +1
+        automaton.state[row,col] = (automaton.state[row, col] + 1) % num_states
         update_display()
 
     fig.canvas.mpl_connect("button_press_event", on_click)
