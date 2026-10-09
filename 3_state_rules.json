@@ -1,0 +1,23 @@
+{
+  "default_state": 0,
+  "edge_mode": "dead",
+  "transitions": [
+    {
+      "state": 0,
+      "neighbors": {
+        "1": [2]
+      },
+      "next_state": 1
+    },
+    {
+      "state": 1,
+      "neighbors": {},
+      "next_state": 2
+    },
+    {
+      "state": 2,
+      "neighbors": {},
+      "next_state": 0
+    }
+  ]
+}
