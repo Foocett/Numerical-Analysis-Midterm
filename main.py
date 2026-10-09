@@ -3,7 +3,6 @@
 The transition rules live in ``rules.json`` rather than in the update
 algorithm.  This keeps the numerical part reusable by a future GUI.
 """
-# TODO Implement GUI support for the cellular automaton
 
 from __future__ import annotations
 
@@ -18,6 +17,7 @@ import matplotlib.pyplot as plt
 from tkinter import filedialog
 
 from matplotlib.colors import ListedColormap
+
 
 @dataclass(frozen=True)
 class TransitionRule:
@@ -194,11 +194,12 @@ def run_terminal_demo(config_path: Path, generations: int) -> None:
     # on a load button: replace the model with CellularAutomaton.load_state(...)
 
 
-#handles 2 states vs multistate colormaps
+# handles 2 states vs multistate colormaps
 def get_cmap_and_max_states(automaton):
-    max_state= max([r.state for r in automaton.rules] + [r.next_state for r in automaton.rules] + [0])
+    max_state = max([r.state for r in automaton.rules] +
+                    [r.next_state for r in automaton.rules] + [0])
     if max_state >= 2:
-        #3 states
+        # 3 states
         return ListedColormap(["black", "grey", "white"]), max_state
     else:
         return ListedColormap(["black", "white"]), 1
@@ -208,18 +209,18 @@ def run_gui(config_path: Path) -> None:
     config = load_config(config_path)
     automaton = CellularAutomaton.from_config(initial_demo_state(), config)
 
-    #start paused
+    # start paused
     automaton.pause()
 
-    fig, ax = plt.subplots(figsize=(7.5,7.5))
+    fig, ax = plt.subplots(figsize=(7.5, 7.5))
     fig.subplots_adjust(bottom=0.20)
     fig.suptitle("Cellular Automaton", fontsize=18, fontweight="bold")
-    #image = ax.imshow(automaton.state, cmap="binary", interpolation="nearest", extent=(-0.5, 14.5, 14.5, -0.5))
+    # image = ax.imshow(automaton.state, cmap="binary", interpolation="nearest", extent=(-0.5, 14.5, 14.5, -0.5))
 
     initial_cmap, initial_vmax = get_cmap_and_max_states(automaton)
-    image = ax.imshow(automaton.state, cmap=initial_cmap,vmin=0,vmax=initial_vmax,interpolation="nearest",extent=(-0.5,14.5,14.5,-0.5))
+    image = ax.imshow(automaton.state, cmap=initial_cmap, vmin=0, vmax=initial_vmax,
+                      interpolation="nearest", extent=(-0.5, 14.5, 14.5, -0.5))
 
-    
     ax.set_title(f"Generation {automaton.generation}")
 
     # Add grid lines
@@ -238,30 +239,34 @@ def run_gui(config_path: Path) -> None:
     ax.set_xticklabels([])
     ax.set_yticklabels([])
 
-
-    #pause/start button at bottom window
+    # pause/start button at bottom window
     pause_ax = fig.add_axes([0.08, 0.04, 0.17, 0.07])
-    pause_button = plt.Button(pause_ax, "Start", color="seagreen", hovercolor="green")
+    pause_button = plt.Button(
+        pause_ax, "Start", color="seagreen", hovercolor="green")
     pause_button.label.set_color("white")
 
-    #rule change button
+    # rule change button
     rules_ax = fig.add_axes([0.27, 0.04, 0.17, 0.07])
-    rules_button = plt.Button(rules_ax, "Rules", color="black", hovercolor="green")
+    rules_button = plt.Button(
+        rules_ax, "Rules", color="black", hovercolor="green")
     rules_button.label.set_color("white")
 
-    #load Prepared States button at bottom window
+    # load Prepared States button at bottom window
     pre_state_ax = fig.add_axes([0.48, 0.04, 0.22, 0.07])
-    pre_state_button = plt.Button(pre_state_ax, "Prepared States", color="steelblue", hovercolor="royalblue")
+    pre_state_button = plt.Button(
+        pre_state_ax, "Prepared States", color="steelblue", hovercolor="royalblue")
     pre_state_button.label.set_color("white")
 
-    #load State from File button
+    # load State from File button
     file_state_ax = fig.add_axes([0.72, 0.04, 0.17, 0.07])
-    file_state_button = plt.Button(file_state_ax, "Load File", color="darkorange", hovercolor="orange")
+    file_state_button = plt.Button(
+        file_state_ax, "Load File", color="darkorange", hovercolor="orange")
     file_state_button.label.set_color("white")
 
-    #exit button at top
+    # exit button at top
     exit_ax = fig.add_axes([0.82, 0.90, 0.10, 0.06])
-    exit_button = plt.Button(exit_ax, "Exit", color="firebrick", hovercolor="red")
+    exit_button = plt.Button(
+        exit_ax, "Exit", color="firebrick", hovercolor="red")
     exit_button.label.set_color("white")
 
     def update_display() -> None:
@@ -274,7 +279,7 @@ def run_gui(config_path: Path) -> None:
 
     exit_button.on_clicked(exit_program)
 
-    #hnadles swapping rule files
+    # hnadles swapping rule files
     def load_selected_rules(file_path: Path):
         new_config = load_config(file_path)
         automaton.rules = [
@@ -291,13 +296,13 @@ def run_gui(config_path: Path) -> None:
         automaton.default_state = int(new_config.get("default_state", 0))
         automaton.edge_mode = str(new_config.get("edge_mode", "dead"))
 
-        #reset grid upon switching rules
+        # reset grid upon switching rules
         automaton.state = np.zeros(automaton.shape, dtype=int)
         automaton.generation = 0
         automaton.pause()
         pause_button.label.set_text("Start")
 
-        #updates colormap to new ruleset
+        # updates colormap to new ruleset
         cmap_new, vmax_new = get_cmap_and_max_states(automaton)
         image.set_cmap(cmap_new)
         image.set_clim(vmin=0, vmax=vmax_new)
@@ -317,7 +322,8 @@ def run_gui(config_path: Path) -> None:
     rules_button.on_clicked(load_rules_callback)
 
     def load_selected_state(file_path):
-        new_automaton = CellularAutomaton.load_state(file_path, automaton.rules, default_state=automaton.default_state, edge_mode=automaton.edge_mode,)
+        new_automaton = CellularAutomaton.load_state(
+            file_path, automaton.rules, default_state=automaton.default_state, edge_mode=automaton.edge_mode,)
 
         automaton.state = new_automaton.state
         automaton.generation = new_automaton.generation
@@ -330,7 +336,8 @@ def run_gui(config_path: Path) -> None:
     def load_prepared_state(event):
         states_folder = Path(__file__).with_name("states")
 
-        file_path = filedialog.askopenfilename(title="Select Prepared State", initialdir=states_folder, filetypes=[("JSON files", "*.json")])
+        file_path = filedialog.askopenfilename(
+            title="Select Prepared State", initialdir=states_folder, filetypes=[("JSON files", "*.json")])
 
         if not file_path:
             return
@@ -340,7 +347,8 @@ def run_gui(config_path: Path) -> None:
     pre_state_button.on_clicked(load_prepared_state)
 
     def load_state_from_file(event):
-        file_path = filedialog.askopenfilename(title="Select State File", filetypes=[("JSON files", "*.json")])
+        file_path = filedialog.askopenfilename(
+            title="Select State File", filetypes=[("JSON files", "*.json")])
 
         if not file_path:
             return
@@ -348,7 +356,6 @@ def run_gui(config_path: Path) -> None:
         load_selected_state(Path(file_path))
 
     file_state_button.on_clicked(load_state_from_file)
-
 
     def toggle_pause(event) -> None:
         if automaton.running:
@@ -363,23 +370,23 @@ def run_gui(config_path: Path) -> None:
     pause_button.on_clicked(toggle_pause)
 
     def on_click(event):
-        #no edit while running
+        # no edit while running
         if automaton.running:
             return
 
-        #grid don't respond to button clicks
+        # grid don't respond to button clicks
         if event.inaxes != ax:
             return
 
-        #check click in grid
+        # check click in grid
         if event.xdata is None or event.ydata is None:
             return
 
         row = int(round(event.ydata))
         col = int(round(event.xdata))
 
-        #check cell on board
-        if( row < 0 or row >= automaton.state.shape[0] or col < 0 or col >= automaton.state.shape[1]):
+        # check cell on board
+        if (row < 0 or row >= automaton.state.shape[0] or col < 0 or col >= automaton.state.shape[1]):
             return
         """
         #toggle cell
@@ -389,14 +396,14 @@ def run_gui(config_path: Path) -> None:
             automaton.state[row, col] = 0
         """
 
-        #cycles through multiple states rather than 0 or 1
+        # cycles through multiple states rather than 0 or 1
         _filler, max_states = get_cmap_and_max_states(automaton)
-        num_states = max_states +1
-        automaton.state[row,col] = (automaton.state[row, col] + 1) % num_states
+        num_states = max_states + 1
+        automaton.state[row, col] = (
+            automaton.state[row, col] + 1) % num_states
         update_display()
 
     fig.canvas.mpl_connect("button_press_event", on_click)
-    
 
     def update_animation() -> None:
         if automaton.running:
@@ -408,7 +415,7 @@ def run_gui(config_path: Path) -> None:
     timer.start()
 
     plt.show()
-    
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -423,7 +430,6 @@ def main() -> None:
     args = parser.parse_args()
     if args.generations < 0:
         parser.error("--generations must be non-negative")
-
 
     run_gui(args.rules)
 
