@@ -1,6 +1,13 @@
 # Numerical Analysis Midterm: Configurable Cellular Automaton
 
+## Abstract
+This project implements a configurable two-dimensional cellular automaton in Python, using JSON files to define cell transition rules and Matplotlib to visualize the simulation. The design separates the numerical update engine from the transition rules, allowing both two-state and three-state configurations to run without modifying the core algorithm. Validation confirmed that the model initializes correctly, executes generation updates, and supports the supplied configurations and prepared states. The project successfully demonstrates configurable state transitions and interactive visualization, although limitations remain in command-line execution, automated testing, and error handling. Future improvements could make the application more robust, easier to test, and more flexible for larger simulations.
+
 ## 1. Project overview
+
+Cellular automata are computational models consisting of a grid of cells that evolve over discrete time steps according to predefined transition rules. One of the best-known examples is Conway's Game of Life, developed by mathematician John Horton Conway in 1970. In this system, each cell is either alive or dead, and its next state depends on the states of its surrounding neighbors. Cellular automata provide a useful way to study how simple local rules can produce complex patterns and behaviors.
+
+Our team chose to develop a configurable cellular automaton to explore numerical state transitions and create a simulation that could be adapted to different rule sets. Rather than implementing only one fixed set of rules, we designed the program to load transitions from JSON configuration files. This approach allows users to experiment with different behaviors while keeping the numerical engine separate from the configuration and graphical interface.
 
 This project implements a finite, two-dimensional cellular automaton in Python.
 The numerical engine is separated from the rule data: the update algorithm is
@@ -301,6 +308,22 @@ The alternate file demonstrates a three-state automaton:
 The empty `neighbors` object means “no neighbor-count restriction.” This is
 different from requiring zero neighbors: it is a wildcard that matches every
 neighborhood.
+
+
+
+### Three-State Cellular Automaton Transition Diagram
+
+```mermaid
+flowchart TD
+    A["State 0"] -->|Exactly 2 state-1 neighbors| B["State 1"]
+    A -->|Otherwise| A
+    B -->|Always| C["State 2"]
+    C -->|Always| A
+```
+
+**Figure 1:** A cell in state 0 becomes state 1 when exactly two neighbors are in state 1; otherwise, it remains in state 0. State 1 always transitions to state 2, and state 2 always transitions to state 0.
+
+
 
 ### Rule ordering
 
